@@ -9,8 +9,8 @@ import SuggestedPrompts from './SuggestedPrompts'
 import { Clock, Sparkles } from 'lucide-react'
 import AdvancedControls, { AdvancedSettings } from './AdvancedControls'
 
-const STYLE_PRESETS = ['Cartoon', 'Realistic', 'Manga'] as const
-type StylePreset = typeof STYLE_PRESETS[number]
+export const STYLE_PRESETS = ['Cartoon', 'Realistic', 'Manga'] as const
+export type StylePreset = typeof STYLE_PRESETS[number]
 
 const MAX_PROMPT_LENGTH = 500
 const DRAFT_SAVE_DELAY = 1000 // 1 second
