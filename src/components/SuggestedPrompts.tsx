@@ -2,18 +2,19 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
+import { StylePreset } from './GeneratorSection'
 
 const SUGGESTED_PROMPTS = [
-  { text: "A magical forest with fairy houses", style: "Cartoon" },
-  { text: "A friendly dragon reading a book", style: "Manga" },
-  { text: "A peaceful garden with butterflies", style: "Realistic" },
-  { text: "An underwater city with mermaids", style: "Cartoon" },
-  { text: "A space station with robots", style: "Manga" },
-  { text: "A cozy treehouse in autumn", style: "Realistic" },
+  { text: "A magical forest with fairy houses", style: "Cartoon" as StylePreset },
+  { text: "A friendly dragon reading a book", style: "Manga" as StylePreset },
+  { text: "A peaceful garden with butterflies", style: "Realistic" as StylePreset },
+  { text: "An underwater city with mermaids", style: "Cartoon" as StylePreset },
+  { text: "A space station with robots", style: "Manga" as StylePreset },
+  { text: "A cozy treehouse in autumn", style: "Realistic" as StylePreset },
 ]
 
 interface SuggestedPromptsProps {
-  onSelectPrompt: (prompt: string, style: string) => void
+  onSelectPrompt: (prompt: string, style: StylePreset) => void
 }
 
 export default function SuggestedPrompts({ onSelectPrompt }: SuggestedPromptsProps) {
