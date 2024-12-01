@@ -1,5 +1,5 @@
 import SignInWithGoogle from '@/components/SignInWithGoogle'
-import EmailSignIn from '@/components/EmailSignIn'
+import EmailSignIn from '../../components/EmailSignIn'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
