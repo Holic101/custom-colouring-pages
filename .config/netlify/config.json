@@ -1,0 +1,20 @@
+{
+	"telemetryDisabled": false,
+	"cliId": "329f635c-2781-4ce5-b9aa-3206d80ba456",
+	"userId": "674c48f876ebfe8dfddaa918",
+	"users": {
+		"674c48f876ebfe8dfddaa918": {
+			"id": "674c48f876ebfe8dfddaa918",
+			"name": "Dimitri Vogel",
+			"email": "dmitri.vogel@gmail.com",
+			"auth": {
+				"token": "nfc_qxHq6tpe4mXMFhXcJjXExeycNZgnzHEc5e09",
+				"github": {
+					"user": "Holic101",
+					"token": "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",
+					"provider": "github"
+				}
+			}
+		}
+	}
+}
