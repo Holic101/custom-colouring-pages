@@ -197,36 +197,7 @@ export function GeneratorSection() {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <form onSubmit={handleGenerate} className="space-y-6">
-        {/* Suggested Prompts */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Need inspiration?</h3>
-          <SuggestedPrompts onSelectPrompt={handleSuggestedPrompt} />
-        </div>
-
-        {/* Style Presets */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Style
-          </label>
-          <div className="flex gap-2">
-            {STYLE_PRESETS.map((style) => (
-              <button
-                key={style}
-                type="button"
-                onClick={() => handleStyleSelect(style)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                  ${selectedStyle === style
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                {style}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Prompt Input */}
+        {/* Prompt Input - Now First */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <label htmlFor="prompt" className="block text-sm font-medium text-gray-700">
@@ -256,39 +227,30 @@ export function GeneratorSection() {
           </div>
         </div>
 
-        {/* Prompt History Popup */}
-        {showHistory && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Prompt History</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowHistory(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="space-y-2">
-                {promptHistory.map((item, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handleHistorySelect(item)}
-                    className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                  >
-                    <p className="text-sm">{item.text}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Style: {item.style} • {new Date(item.timestamp).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* Style Presets */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Style
+          </label>
+          <div className="flex gap-2">
+            {STYLE_PRESETS.map((style) => (
+              <button
+                key={style}
+                type="button"
+                onClick={() => handleStyleSelect(style)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                  ${selectedStyle === style
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                {style}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Add Advanced Controls before the Generate button */}
+        {/* Advanced Controls */}
         <AdvancedControls
           settings={advancedSettings}
           onChange={setAdvancedSettings}
@@ -347,6 +309,38 @@ export function GeneratorSection() {
             </div>
             <div className="p-4 border-t bg-gray-50">
               <p className="text-sm text-gray-600">{prompt}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Prompt History Popup - Keep this at the end */}
+        {showHistory && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">Prompt History</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="space-y-2">
+                {promptHistory.map((item, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleHistorySelect(item)}
+                    className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                  >
+                    <p className="text-sm">{item.text}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Style: {item.style} • {new Date(item.timestamp).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

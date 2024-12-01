@@ -10,6 +10,8 @@ interface AuthContextType {
   loading: boolean
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
+  signUpWithEmail: (email: string, password: string) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -18,6 +20,8 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   signInWithGoogle: async () => {},
   signOut: async () => {},
+  signInWithEmail: async () => {},
+  signUpWithEmail: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -56,13 +60,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+      window.location.href = '/auth'
     } catch (error) {
       console.error('Error signing out:', error)
+      throw error
+    }
+  }
+
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (error) throw error
+    } catch (error) {
+      console.error('Error signing in with email:', error)
+      throw error
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+      if (error) throw error
+    } catch (error) {
+      console.error('Error signing up with email:', error)
+      throw error
     }
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      signInWithGoogle, 
+      signOut,
+      signInWithEmail,
+      signUpWithEmail 
+    }}>
       {children}
     </AuthContext.Provider>
   )
