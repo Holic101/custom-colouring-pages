@@ -4,231 +4,184 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/contexts/AuthContext'
-import { Heart } from 'lucide-react'
-import TagInput from './TagInput'
-import GalleryFilters from './GalleryFilters'
+import { Search, Heart, X } from 'lucide-react'
 
-type ImageType = {
+interface ImageType {
   id: string
   prompt: string
   storage_path: string
   created_at: string
   is_favorite: boolean
-  tags: string[]
 }
 
 export function GallerySection() {
   const { user } = useAuth()
-  const [images, setImages] = useState<ImageType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [showFavorites, setShowFavorites] = useState(false)
-  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [images, setImages] = useState<ImageType[]>([])
   const supabase = createClient()
 
-  // Load images and tags
+  // Load images
   useEffect(() => {
-    async function loadData() {
+    async function loadImages() {
       if (!user) return
-
+      
       try {
-        // Load images with tags
-        const { data: imagesData, error: imagesError } = await supabase
+        const { data, error } = await supabase
           .from('images')
-          .select(`
-            *,
-            image_tags (
-              tags (name)
-            )
-          `)
+          .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
 
-        if (imagesError) throw imagesError
-
-        // Transform the data to include tags array
-        const processedImages = imagesData.map(img => ({
-          ...img,
-          tags: img.image_tags?.map((it: any) => it.tags.name) || []
-        }))
-
-        setImages(processedImages)
-
-        // Load all available tags
-        const { data: tagsData, error: tagsError } = await supabase
-          .from('tags')
-          .select('name')
-
-        if (tagsError) throw tagsError
-        setAvailableTags(tagsData.map(t => t.name))
-
+        if (error) throw error
+        setImages(data || [])
       } catch (error) {
-        console.error('Failed to load data:', error)
-      } finally {
-        setIsLoading(false)
+        console.error('Failed to load images:', error)
       }
     }
 
-    loadData()
+    loadImages()
   }, [user, supabase])
 
-  const toggleFavorite = async (imageId: string) => {
+  // Handle delete
+  const handleDelete = async (image: ImageType) => {
     try {
-      const image = images.find(img => img.id === imageId)
-      if (!image) return
+      const { error } = await supabase
+        .from('images')
+        .delete()
+        .eq('storage_path', image.storage_path)
 
+      if (error) throw error
+      setImages(images.filter(img => img.id !== image.id))
+    } catch (error) {
+      console.error('Error deleting image:', error)
+    }
+  }
+
+  // Handle favorite toggle
+  const handleToggleFavorite = async (image: ImageType) => {
+    try {
       const { error } = await supabase
         .from('images')
         .update({ is_favorite: !image.is_favorite })
-        .eq('id', imageId)
+        .eq('id', image.id)
 
       if (error) throw error
-
-      setImages(images.map(img =>
-        img.id === imageId ? { ...img, is_favorite: !img.is_favorite } : img
+      setImages(images.map(img => 
+        img.id === image.id ? { ...img, is_favorite: !img.is_favorite } : img
       ))
     } catch (error) {
-      console.error('Failed to toggle favorite:', error)
+      console.error('Error updating favorite:', error)
     }
   }
 
-  const addTag = async (imageId: string, tag: string) => {
-    try {
-      // First, ensure the tag exists
-      const { data: existingTag, error: tagError } = await supabase
-        .from('tags')
-        .select('id')
-        .eq('name', tag)
-        .single()
-
-      let tagId
-      if (tagError) {
-        // Create new tag
-        const { data: newTag, error: createError } = await supabase
-          .from('tags')
-          .insert({ name: tag })
-          .select('id')
-          .single()
-
-        if (createError) throw createError
-        tagId = newTag.id
-      } else {
-        tagId = existingTag.id
-      }
-
-      // Add tag to image
-      const { error: linkError } = await supabase
-        .from('image_tags')
-        .insert({ image_id: imageId, tag_id: tagId })
-
-      if (linkError) throw linkError
-
-      // Update local state
-      setImages(images.map(img =>
-        img.id === imageId ? { ...img, tags: [...img.tags, tag] } : img
-      ))
-
-      if (!availableTags.includes(tag)) {
-        setAvailableTags([...availableTags, tag])
-      }
-    } catch (error) {
-      console.error('Failed to add tag:', error)
-    }
-  }
-
-  const removeTag = async (imageId: string, tag: string) => {
-    try {
-      const { data: tagData, error: tagError } = await supabase
-        .from('tags')
-        .select('id')
-        .eq('name', tag)
-        .single()
-
-      if (tagError) throw tagError
-
-      const { error } = await supabase
-        .from('image_tags')
-        .delete()
-        .eq('image_id', imageId)
-        .eq('tag_id', tagData.id)
-
-      if (error) throw error
-
-      setImages(images.map(img =>
-        img.id === imageId ? { ...img, tags: img.tags.filter(t => t !== tag) } : img
-      ))
-    } catch (error) {
-      console.error('Failed to remove tag:', error)
-    }
-  }
-
+  // Filter images
   const filteredImages = images.filter(image => {
-    if (showFavorites && !image.is_favorite) return false
-    if (selectedTags.length === 0) return true
-    return selectedTags.every(tag => image.tags.includes(tag))
+    const matchesSearch = image.prompt.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesFavorites = showFavorites ? image.is_favorite : true
+    return matchesSearch && matchesFavorites
   })
 
-  if (isLoading) {
-    return <div>Loading...</div>
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="mb-6 space-y-4">
+        {/* Search and Filter Controls */}
+        <div className="flex gap-4">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search prompts..."
+              className="w-full pl-10 pr-4 py-2 border rounded-lg"
+            />
+            <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+          </div>
+          <button
+            onClick={() => setShowFavorites(!showFavorites)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+              showFavorites 
+                ? 'bg-red-100 text-red-600' 
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            <Heart className={`w-5 h-5 ${showFavorites ? 'fill-current' : ''}`} />
+            Favorites
+          </button>
+        </div>
+      </div>
+
+      {/* Image Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredImages.map((image) => (
+          <ImageCard 
+            key={image.id} 
+            image={image}
+            onDelete={handleDelete}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface ImageCardProps {
+  image: ImageType
+  onDelete: (image: ImageType) => void
+  onToggleFavorite: (image: ImageType) => void
+}
+
+function ImageCard({ image, onDelete, onToggleFavorite }: ImageCardProps) {
+  const handleImageClick = () => {
+    window.open(image.storage_path, '_blank')
   }
 
   return (
-    <div className="space-y-6">
-      <GalleryFilters
-        selectedTags={selectedTags}
-        availableTags={availableTags}
-        showFavorites={showFavorites}
-        onTagSelect={(tag) => {
-          setSelectedTags(prev =>
-            prev.includes(tag)
-              ? prev.filter(t => t !== tag)
-              : [...prev, tag]
-          )
-        }}
-        onToggleFavorites={() => setShowFavorites(!showFavorites)}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredImages.map((image) => (
-          <div 
-            key={image.id} 
-            className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100"
+    <div className="border border-gray-200 rounded-lg overflow-hidden group">
+      <div className="relative aspect-square">
+        {/* Control buttons */}
+        <div className="absolute top-2 right-2 z-20 flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation() // Prevent image click when clicking button
+              onToggleFavorite(image)
+            }}
+            className={`p-2 rounded-full ${
+              image.is_favorite ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+            } hover:bg-opacity-90 transition-opacity opacity-0 group-hover:opacity-100`}
           >
-            <div className="relative aspect-square">
-              <Image
-                src={image.storage_path}
-                alt={image.prompt}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
-              <button
-                onClick={() => toggleFavorite(image.id)}
-                className="absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white shadow-sm"
-              >
-                <Heart 
-                  className={`w-5 h-5 ${
-                    image.is_favorite 
-                      ? 'fill-red-500 text-red-500' 
-                      : 'text-gray-600'
-                  }`}
-                />
-              </button>
-            </div>
-            <div className="p-4">
-              <p className="text-sm text-gray-900 mb-2">{image.prompt}</p>
-              <TagInput
-                tags={image.tags}
-                onAddTag={(tag) => addTag(image.id, tag)}
-                onRemoveTag={(tag) => removeTag(image.id, tag)}
-                suggestions={availableTags}
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                {new Date(image.created_at).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-        ))}
+            <Heart className={`w-5 h-5 ${image.is_favorite ? 'fill-current' : ''}`} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation() // Prevent image click when clicking button
+              if (window.confirm('Are you sure you want to delete this image?')) {
+                onDelete(image)
+              }
+            }}
+            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600 transition-opacity opacity-0 group-hover:opacity-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Clickable image container */}
+        <div 
+          onClick={handleImageClick}
+          className="relative w-full h-full cursor-pointer"
+        >
+          <Image
+            src={image.storage_path}
+            alt={image.prompt}
+            fill
+            className="object-contain p-4 hover:scale-105 transition-transform"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        </div>
+      </div>
+      <div className="p-4 border-t bg-gray-50">
+        <p className="text-sm text-gray-600">{image.prompt}</p>
       </div>
     </div>
   )

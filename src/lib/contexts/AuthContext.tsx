@@ -10,8 +10,8 @@ interface AuthContextType {
   loading: boolean
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
-  signInWithEmail: (email: string, password: string) => Promise<void>
-  signUpWithEmail: (email: string, password: string) => Promise<void>
+  // signInWithEmail: (email: string, password: string) => Promise<void>
+  // signUpWithEmail: (email: string, password: string) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -20,8 +20,8 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   signInWithGoogle: async () => {},
   signOut: async () => {},
-  signInWithEmail: async () => {},
-  signUpWithEmail: async () => {},
+  // signInWithEmail: async () => {},
+  // signUpWithEmail: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Comment out email auth functions
+  /*
   const signInWithEmail = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -99,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error
     }
   }
+  */
 
   return (
     <AuthContext.Provider value={{ 
@@ -107,8 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading, 
       signInWithGoogle, 
       signOut,
-      signInWithEmail,
-      signUpWithEmail 
+      // signInWithEmail,
+      // signUpWithEmail 
     }}>
       {children}
     </AuthContext.Provider>

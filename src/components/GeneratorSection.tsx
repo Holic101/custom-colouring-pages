@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import SuggestedPrompts from './SuggestedPrompts'
-import { Clock, Sparkles } from 'lucide-react'
+import { Clock, Sparkles, X, Heart } from 'lucide-react'
 import AdvancedControls, { AdvancedSettings } from './AdvancedControls'
 
 export const STYLE_PRESETS = ['Cartoon', 'Realistic', 'Manga'] as const
@@ -42,6 +42,7 @@ export function GeneratorSection() {
     removeBackground: false,
     symmetry: 'None',
   })
+  const [isFavorite, setIsFavorite] = useState(false)
 
   // Load prompt history from localStorage
   useEffect(() => {
@@ -103,16 +104,14 @@ export function GeneratorSection() {
     console.log('Starting generation...', { 
       userId: user.id, 
       prompt,
-      style: selectedStyle,
-      settings: advancedSettings
+      style: selectedStyle
     })
     setIsGenerating(true)
     setError(null)
     setGeneratedImage(null)
 
     try {
-      // 1. Generate initial image with DALL-E
-      console.log('Generating initial image...')
+      // Generate image with DALL-E
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,59 +130,28 @@ export function GeneratorSection() {
       if (data.error) throw new Error(data.error)
       if (!data.output?.[0]) throw new Error('No image generated')
 
-      const initialImageUrl = data.output[0]
+      const imageUrl = data.output[0]
+      setGeneratedImage(imageUrl)
 
-      // 2. Process the image
-      console.log('Processing image...')
-      const processResponse = await fetch('/api/process-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageUrl: initialImageUrl,
-          settings: {
-            lineThickness: advancedSettings.lineThickness,
-            edgeSoftness: advancedSettings.edgeSoftness,
-            removeBackground: advancedSettings.removeBackground,
-            symmetry: advancedSettings.symmetry,
-          }
-        })
-      })
-
-      if (!processResponse.ok) {
-        throw new Error('Image processing failed')
-      }
-
-      const processedData = await processResponse.json()
-      if (!processedData.success) {
-        throw new Error(processedData.error || 'Processing failed')
-      }
-
-      // 3. Set the processed image
-      setGeneratedImage(processedData.processedImage)
-
-      // 4. Save to Supabase
-      console.log('Saving to Supabase...')
-      const { data: insertedData, error: supabaseError } = await supabase
+      // Save to Supabase
+      const { error: supabaseError } = await supabase
         .from('images')
         .insert({
           user_id: user.id,
           prompt,
-          storage_path: processedData.processedImage, // Save the processed image
+          storage_path: imageUrl,
           parameters: { 
             model: 'dall-e-3',
             style: selectedStyle,
-            ...advancedSettings
+            settings: advancedSettings
           }
         })
-        .select()
-        .single()
 
       if (supabaseError) {
         console.error('Supabase error:', supabaseError)
         throw supabaseError
       }
 
-      console.log('Successfully saved to Supabase:', insertedData)
       router.refresh()
 
     } catch (error) {
@@ -191,6 +159,42 @@ export function GeneratorSection() {
       setError(error instanceof Error ? error.message : 'Failed to generate image')
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this image?')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('images')
+        .delete()
+        .eq('storage_path', generatedImage)
+
+      if (error) throw error
+      setGeneratedImage(null)
+      router.refresh()
+    } catch (error) {
+      console.error('Error deleting image:', error)
+      setError('Failed to delete image')
+    }
+  }
+
+  const handleToggleFavorite = async () => {
+    try {
+      const { error } = await supabase
+        .from('images')
+        .update({ is_favorite: !isFavorite })
+        .eq('storage_path', generatedImage)
+
+      if (error) throw error
+      setIsFavorite(!isFavorite)
+      router.refresh()
+    } catch (error) {
+      console.error('Error updating favorite:', error)
+      setError('Failed to update favorite status')
     }
   }
 
@@ -291,14 +295,27 @@ export function GeneratorSection() {
         {generatedImage && (
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="relative aspect-square w-full bg-gray-50">
-              <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                Loading image...
+              <div className="absolute top-2 right-2 z-20 flex gap-2">
+                <button
+                  onClick={handleToggleFavorite}
+                  className={`p-2 rounded-full ${
+                    isFavorite ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+                  } hover:bg-opacity-90`}
+                >
+                  <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
               <Image
                 src={generatedImage}
                 alt={prompt}
                 fill
-                className="object-contain z-10"
+                className="object-contain z-10 p-4"
                 priority
                 sizes="(max-width: 768px) 100vw, 50vw"
                 onError={(e) => {

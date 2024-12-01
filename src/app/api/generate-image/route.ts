@@ -7,7 +7,7 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { prompt, style, settings } = await request.json()
+    const { prompt, style } = await request.json()
     
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ 
@@ -16,10 +16,11 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
 
-    // Add more specific prompt engineering
-    const enhancedPrompt = `Create a black and white line art suitable for a coloring page in ${style} style of: ${prompt}. 
-      The image should have clear, well-defined lines and no shading or coloring. 
-      Make it ${settings?.complexity || 'Medium'} complexity with ${settings?.detailLevel || 'Medium'} detail level.`
+    const enhancedPrompt = `Create a black and white line drawing of ${prompt} for a coloring book.
+      Use thin, precise black lines for all outlines and details.
+      No double lines, no white outlines, no shading.
+      Pure white background.
+      Style: ${style}.`
 
     try {
       const response = await openai.images.generate({
