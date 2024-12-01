@@ -21,10 +21,6 @@ interface PromptHistory {
   timestamp: number
 }
 
-interface SuggestedPromptsProps {
-  onSelectPrompt: (prompt: string, style: StylePreset) => void;
-}
-
 export function GeneratorSection() {
   const { user } = useAuth()
   const [prompt, setPrompt] = useState('')
