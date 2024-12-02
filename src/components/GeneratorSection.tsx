@@ -200,8 +200,11 @@ export function GeneratorSection() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <form onSubmit={handleGenerate} className="space-y-6">
-        {/* Prompt Input - Now First */}
+      <form 
+        onSubmit={handleGenerate} 
+        className="space-y-6"
+      >
+        {/* Prompt Input */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <label htmlFor="prompt" className="block text-sm font-medium text-gray-700">
@@ -219,6 +222,12 @@ export function GeneratorSection() {
               placeholder="e.g., A cute cat playing with yarn"
               className="w-full h-32 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
               disabled={isGenerating}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault() // Prevent new line
+                  handleGenerate(e) // Submit form
+                }
+              }}
             />
             <button
               type="button"
