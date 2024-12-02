@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/contexts/AuthContext'
-import { Search, Heart, X } from 'lucide-react'
+import { Search, Heart, X, Printer } from 'lucide-react'
 
 interface ImageType {
   id: string
@@ -21,9 +21,52 @@ export function GallerySection() {
   const [images, setImages] = useState<ImageType[]>([])
   const supabase = createClient()
 
-  // Load images
+  const handleDelete = async (image: ImageType) => {
+    if (!window.confirm('Are you sure you want to delete this image?')) return
+
+    try {
+      const { error } = await supabase
+        .from('images')
+        .delete()
+        .eq('id', image.id)
+
+      if (error) throw error
+      setImages(images.filter(img => img.id !== image.id))
+    } catch (error) {
+      console.error('Error deleting image:', error)
+    }
+  }
+
+  const handleToggleFavorite = async (image: ImageType) => {
+    try {
+      const { error } = await supabase
+        .from('images')
+        .update({ is_favorite: !image.is_favorite })
+        .eq('id', image.id)
+
+      if (error) throw error
+      setImages(images.map(img => 
+        img.id === image.id ? { ...img, is_favorite: !img.is_favorite } : img
+      ))
+    } catch (error) {
+      console.error('Error updating favorite:', error)
+    }
+  }
+
+  const handleImageClick = (imageUrl: string) => {
+    window.open(imageUrl, '_blank')
+  }
+
+  const handlePrint = (e: React.MouseEvent, imageUrl: string) => {
+    e.stopPropagation()
+    const printWindow = window.open(imageUrl)
+    printWindow?.addEventListener('load', () => {
+      printWindow.print()
+    })
+  }
+
   useEffect(() => {
-    async function loadImages() {
+    const loadImages = async () => {
       if (!user) return
       
       try {
@@ -43,39 +86,7 @@ export function GallerySection() {
     loadImages()
   }, [user, supabase])
 
-  // Handle delete
-  const handleDelete = async (image: ImageType) => {
-    try {
-      const { error } = await supabase
-        .from('images')
-        .delete()
-        .eq('storage_path', image.storage_path)
-
-      if (error) throw error
-      setImages(images.filter(img => img.id !== image.id))
-    } catch (error) {
-      console.error('Error deleting image:', error)
-    }
-  }
-
-  // Handle favorite toggle
-  const handleToggleFavorite = async (image: ImageType) => {
-    try {
-      const { error } = await supabase
-        .from('images')
-        .update({ is_favorite: !image.is_favorite })
-        .eq('id', image.id)
-
-      if (error) throw error
-      setImages(images.map(img => 
-        img.id === image.id ? { ...img, is_favorite: !img.is_favorite } : img
-      ))
-    } catch (error) {
-      console.error('Error updating favorite:', error)
-    }
-  }
-
-  // Filter images
+  // Filter images based on search and favorites
   const filteredImages = images.filter(image => {
     const matchesSearch = image.prompt.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesFavorites = showFavorites ? image.is_favorite : true
@@ -114,74 +125,52 @@ export function GallerySection() {
       {/* Image Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredImages.map((image) => (
-          <ImageCard 
-            key={image.id} 
-            image={image}
-            onDelete={handleDelete}
-            onToggleFavorite={handleToggleFavorite}
-          />
+          <div key={image.id} className="relative group">
+            <div className="absolute top-2 right-2 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleToggleFavorite(image)
+                }}
+                className={`p-2 rounded-full ${
+                  image.is_favorite ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+                } hover:bg-opacity-90`}
+              >
+                <Heart className={`w-5 h-5 ${image.is_favorite ? 'fill-current' : ''}`} />
+              </button>
+              <button
+                onClick={(e) => handlePrint(e, image.storage_path)}
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600"
+              >
+                <Printer className="w-5 h-5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDelete(image)
+                }}
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div 
+              className="relative aspect-square cursor-pointer"
+              onClick={() => handleImageClick(image.storage_path)}
+            >
+              <Image
+                src={image.storage_path}
+                alt={image.prompt}
+                fill
+                className="object-contain rounded-lg"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </div>
+            <div className="p-4 border-t bg-gray-50">
+              <p className="text-sm text-gray-600">{image.prompt}</p>
+            </div>
+          </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-interface ImageCardProps {
-  image: ImageType
-  onDelete: (image: ImageType) => void
-  onToggleFavorite: (image: ImageType) => void
-}
-
-function ImageCard({ image, onDelete, onToggleFavorite }: ImageCardProps) {
-  const handleImageClick = () => {
-    window.open(image.storage_path, '_blank')
-  }
-
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden group">
-      <div className="relative aspect-square">
-        {/* Control buttons */}
-        <div className="absolute top-2 right-2 z-20 flex gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation() // Prevent image click when clicking button
-              onToggleFavorite(image)
-            }}
-            className={`p-2 rounded-full ${
-              image.is_favorite ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
-            } hover:bg-opacity-90 transition-opacity opacity-0 group-hover:opacity-100`}
-          >
-            <Heart className={`w-5 h-5 ${image.is_favorite ? 'fill-current' : ''}`} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation() // Prevent image click when clicking button
-              if (window.confirm('Are you sure you want to delete this image?')) {
-                onDelete(image)
-              }
-            }}
-            className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600 transition-opacity opacity-0 group-hover:opacity-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Clickable image container */}
-        <div 
-          onClick={handleImageClick}
-          className="relative w-full h-full cursor-pointer"
-        >
-          <Image
-            src={image.storage_path}
-            alt={image.prompt}
-            fill
-            className="object-contain p-4 hover:scale-105 transition-transform"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-        </div>
-      </div>
-      <div className="p-4 border-t bg-gray-50">
-        <p className="text-sm text-gray-600">{image.prompt}</p>
       </div>
     </div>
   )
