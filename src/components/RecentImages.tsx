@@ -4,24 +4,60 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/contexts/AuthContext'
+import { Heart, X } from 'lucide-react'
 
-type ImageType = {
+interface ImageType {
   id: string
   prompt: string
   storage_path: string
   created_at: string
+  is_favorite: boolean
 }
 
 export default function RecentImages() {
-  const [images, setImages] = useState<ImageType[]>([])
-  const [loading, setLoading] = useState(true)
   const { user } = useAuth()
+  const [images, setImages] = useState<ImageType[]>([])
   const supabase = createClient()
 
-  useEffect(() => {
-    async function loadImages() {
-      if (!user) return
+  const handleDelete = async (image: ImageType) => {
+    if (!window.confirm('Are you sure you want to delete this image?')) return
 
+    try {
+      const { error } = await supabase
+        .from('images')
+        .delete()
+        .eq('id', image.id)
+
+      if (error) throw error
+      setImages(images.filter(img => img.id !== image.id))
+    } catch (error) {
+      console.error('Error deleting image:', error)
+    }
+  }
+
+  const handleToggleFavorite = async (image: ImageType) => {
+    try {
+      const { error } = await supabase
+        .from('images')
+        .update({ is_favorite: !image.is_favorite })
+        .eq('id', image.id)
+
+      if (error) throw error
+      setImages(images.map(img => 
+        img.id === image.id ? { ...img, is_favorite: !img.is_favorite } : img
+      ))
+    } catch (error) {
+      console.error('Error updating favorite:', error)
+    }
+  }
+
+  const handleImageClick = (imageUrl: string) => {
+    window.open(imageUrl, '_blank')
+  }
+
+  useEffect(() => {
+    const loadImages = async () => {
+      if (!user) return
       try {
         const { data, error } = await supabase
           .from('images')
@@ -34,74 +70,43 @@ export default function RecentImages() {
         setImages(data || [])
       } catch (error) {
         console.error('Error loading images:', error)
-      } finally {
-        setLoading(false)
       }
     }
 
     loadImages()
   }, [user, supabase])
 
-  const handleImageClick = (imageUrl: string) => {
-    window.open(imageUrl, '_blank', 'noopener,noreferrer')
-  }
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-2 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
-        ))}
-      </div>
-    )
-  }
-
-  if (!images.length) {
-    return (
-      <div className="bg-gray-50 rounded-lg p-8 text-center">
-        <p className="text-gray-600">
-          No images yet. Try generating your first coloring page!
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="grid grid-cols-2 gap-4">
       {images.map((image) => (
-        <div 
-          key={image.id} 
-          className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100 group cursor-pointer hover:shadow-md transition-shadow duration-200"
-          onClick={() => handleImageClick(image.storage_path)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              handleImageClick(image.storage_path)
-            }
-          }}
-        >
-          <div className="relative aspect-square">
+        <div key={image.id} className="relative group">
+          <div className="absolute top-2 right-2 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => handleToggleFavorite(image)}
+              className={`p-2 rounded-full ${
+                image.is_favorite ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+              } hover:bg-opacity-90`}
+            >
+              <Heart className={`w-5 h-5 ${image.is_favorite ? 'fill-current' : ''}`} />
+            </button>
+            <button
+              onClick={() => handleDelete(image)}
+              className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div 
+            className="relative aspect-square cursor-pointer"
+            onClick={() => handleImageClick(image.storage_path)}
+          >
             <Image
               src={image.storage_path}
               alt={image.prompt}
               fill
-              className="object-cover group-hover:opacity-90 transition-opacity duration-200"
-              sizes="(max-width: 768px) 50vw, 33vw"
+              className="object-contain rounded-lg"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200">
-              <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                Click to open
-              </span>
-            </div>
-          </div>
-          <div className="p-3">
-            <p className="text-sm text-gray-600 truncate" title={image.prompt}>
-              {image.prompt}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {new Date(image.created_at).toLocaleDateString()}
-            </p>
           </div>
         </div>
       ))}
