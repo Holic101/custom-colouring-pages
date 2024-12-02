@@ -10,6 +10,7 @@ export function createClient() {
   return createClientComponentClient<Database>({
     cookieOptions: {
       name: 'sb-auth-token',
+      domain: isDevelopment ? 'localhost' : undefined,
       secure: !isDevelopment,
       sameSite: 'lax',
       path: '/'
