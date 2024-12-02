@@ -21,50 +21,6 @@ export function GallerySection() {
   const [images, setImages] = useState<ImageType[]>([])
   const supabase = createClient()
 
-  const handleDelete = async (image: ImageType) => {
-    if (!window.confirm('Are you sure you want to delete this image?')) return
-
-    try {
-      const { error } = await supabase
-        .from('images')
-        .delete()
-        .eq('id', image.id)
-
-      if (error) throw error
-      setImages(images.filter(img => img.id !== image.id))
-    } catch (error) {
-      console.error('Error deleting image:', error)
-    }
-  }
-
-  const handleToggleFavorite = async (image: ImageType) => {
-    try {
-      const { error } = await supabase
-        .from('images')
-        .update({ is_favorite: !image.is_favorite })
-        .eq('id', image.id)
-
-      if (error) throw error
-      setImages(images.map(img => 
-        img.id === image.id ? { ...img, is_favorite: !img.is_favorite } : img
-      ))
-    } catch (error) {
-      console.error('Error updating favorite:', error)
-    }
-  }
-
-  const handleImageClick = (imageUrl: string) => {
-    window.open(imageUrl, '_blank')
-  }
-
-  const handlePrint = (e: React.MouseEvent, imageUrl: string) => {
-    e.stopPropagation()
-    const printWindow = window.open(imageUrl)
-    printWindow?.addEventListener('load', () => {
-      printWindow.print()
-    })
-  }
-
   useEffect(() => {
     const loadImages = async () => {
       if (!user) return
@@ -93,10 +49,53 @@ export function GallerySection() {
     return matchesSearch && matchesFavorites
   })
 
+  const handleDelete = async (image: ImageType) => {
+    if (!window.confirm('Are you sure you want to delete this image?')) return
+
+    try {
+      const { error } = await supabase
+        .from('images')
+        .delete()
+        .eq('id', image.id)
+
+      if (error) throw error
+      setImages(images.filter(img => img.id !== image.id))
+    } catch (error) {
+      console.error('Error deleting image:', error)
+    }
+  }
+
+  const handleToggleFavorite = async (image: ImageType) => {
+    try {
+      const { error } = await supabase
+        .from('images')
+        .update({ is_favorite: !image.is_favorite })
+        .eq('id', image.id)
+
+      if (error) throw error
+      setImages(images.map(img => 
+        img.id === image.id ? { ...img, is_favorite: !image.is_favorite } : img
+      ))
+    } catch (error) {
+      console.error('Error updating favorite:', error)
+    }
+  }
+
+  const handleImageClick = (imageUrl: string) => {
+    window.open(imageUrl, '_blank')
+  }
+
+  const handlePrint = (e: React.MouseEvent, imageUrl: string) => {
+    e.stopPropagation()
+    const printWindow = window.open(imageUrl)
+    printWindow?.addEventListener('load', () => {
+      printWindow.print()
+    })
+  }
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="mb-6 space-y-4">
-        {/* Search and Filter Controls */}
         <div className="flex gap-4">
           <div className="flex-1 relative">
             <input
@@ -122,7 +121,6 @@ export function GallerySection() {
         </div>
       </div>
 
-      {/* Image Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredImages.map((image) => (
           <div key={image.id} className="relative group">
@@ -155,7 +153,7 @@ export function GallerySection() {
               </button>
             </div>
             <div 
-              className="relative aspect-square cursor-pointer"
+              className="relative aspect-square cursor-pointer bg-white rounded-lg overflow-hidden"
               onClick={() => handleImageClick(image.storage_path)}
             >
               <Image
