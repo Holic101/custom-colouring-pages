@@ -9,12 +9,16 @@
   NEXT_USE_NETLIFY_EDGE = "true"
   NODE_VERSION = "18"
 
+[[edge_functions]]
+  path = "/api/*"
+  function = "api"
+
 [functions]
-  included_files = ["src/app/api/**"]
+  external_node_modules = ["@supabase/supabase-js", "openai"]
   node_bundler = "esbuild"
-  external_node_modules = ["@supabase/supabase-js"]
 
 [functions.generate-image]
+  included_files = ["src/app/api/**"]
   timeout = "30s"
 
 [functions.process-image]
